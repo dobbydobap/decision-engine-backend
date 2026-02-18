@@ -1,0 +1,75 @@
+//schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User: the person making decisions 
+model User {
+  id String @id @default(uuid())
+  email String @unique
+  password String 
+  createdAt DateTime @default(now())
+
+  //relations
+  decisions Decision[] //one user can have many decisions
+}
+
+// Decision: A project (eg: which car to buy? etc...)
+model Decision {
+  id String @id @default(uuid())
+  title String 
+  userId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  //relations
+  user User @relation(fields: [userId], references: [id])
+  criteria  Criterion[]
+  options Option[]
+}
+
+//Criterion : The factore (prices , safety ...)
+model Criterion {
+  id String @id @default(uuid())
+  name String 
+  weight Float
+  decisionId String 
+
+  //relations 
+  decision Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  scores Score[]
+}
+
+// Option: The choices ( Tesla model 3 , toyoto camry)
+model Option {
+  id String @id @default(uuid())
+  name String
+  decisionId String
+
+  //relations
+  decision Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  scores  Score[]
+}
+
+//Score: How good an Option is for a Criterion
+// "Toyota Camry" (Option) gets 8/10 on "Reliability" (Criterion)
+model Score {
+  id String @id @default(uuid())
+  value Float    
+  
+  optionId String
+  criterionId String
+
+  //relations
+  option      Option    @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  criterion   Criterion @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+
+  // Constraint: One score per option/criterion pair
+  @@unique([optionId, criterionId]) 
+}
