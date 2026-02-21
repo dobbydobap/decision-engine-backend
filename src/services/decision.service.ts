@@ -27,7 +27,34 @@ export const getUserDecisions = async (userId: string) => {
     orderBy: { 
       createdAt: 'desc' // Show the newest decisions first
     },
+    include: {
+      options: true,
+      criteria: true,
+    }
+  });
+  return decisions;
+};
+
+//get a single decision with all its inner details 
+export const getDecisionById = async (decisionId: string, userId: string) => {
+  const decision = await prisma.decision.findFirst({
+    where: { 
+      id: decisionId,
+      userId: userId, //Security check: Ensure the user actually owns this decision
+    },
+    include: {
+      options: {
+        include: {
+          scores: true, //fetchs the scores attached to each option
+        }
+      },
+      criteria: true,
+    }
   });
 
-  return decisions;
+  if (!decision) {
+    throw new Error('Decision not found or unauthorized');
+  }
+
+  return decision;
 };

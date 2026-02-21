@@ -1,21 +1,17 @@
-// src/controllers/decision.controller.ts
 import { Response } from 'express';
-import { AuthRequest } from '../middlewares/auth.middleware'; //custom request type!
-import { createDecision, getUserDecisions, CreateDecisionSchema } from '../services/decision.service';
+import { AuthRequest } from '../middlewares/auth.middleware';
+import { createDecision, getUserDecisions, getDecisionById, CreateDecisionSchema } from '../services/decision.service';
 
 export const create = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    //Validate the incoming JSON
     const validatedData = CreateDecisionSchema.parse(req.body);
-    
-    //Grab the securely extracted userId from our Bouncer middleware
     const userId = req.user?.userId;
 
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized: No user ID found' });
       return;
     }
-    //Pass data to the Service Layer
+
     const newDecision = await createDecision(validatedData.title, userId);
     
     res.status(201).json({
@@ -29,15 +25,13 @@ export const create = async (req: AuthRequest, res: Response): Promise<void> => 
 
 export const getAll = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // Grab the securely extracted userId from our Bouncer
     const userId = req.user?.userId;
 
     if (!userId) {
-      res.status(401).json({ error: 'Unauthorized: No user ID found' });
+      res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    // Ask the Service Layer to fetch all decisions for THIS user only
     const decisions = await getUserDecisions(userId);
     
     res.status(200).json({
@@ -46,5 +40,27 @@ export const getAll = async (req: AuthRequest, res: Response): Promise<void> => 
     });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch decisions' });
+  }
+};
+
+//get a single decision by its ID
+export const getOne = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const decisionId = req.params.id as string; // Assuming the route is something like /api/decisions/:id
+    if (!userId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    // Pass both IDs to the service to ensure the user actually owns this decision
+    const decision = await getDecisionById(decisionId, userId);
+    
+    res.status(200).json({
+      message: 'Decision retrieved successfully',
+      data: decision
+    });
+  } catch (error: any) {
+    res.status(404).json({ error: error.message });
   }
 };
